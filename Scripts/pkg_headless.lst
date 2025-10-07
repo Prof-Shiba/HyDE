@@ -1,0 +1,38 @@
+# --------------------------------------------------- // System Core
+networkmanager                                         # network manager
+network-manager-applet                                 # network manager system tray utility (for nmtui)
+
+# --------------------------------------------------- // Dependencies
+polkit                                                 # authentication framework
+xdg-user-dirs                                          # Manage user directories like ~/Desktop and ~/Music
+pacman-contrib                                         # for system update check
+parallel                                               # for parallel processing
+jq                                                     # for json processing
+libnotify                                              # for notifications (useful for scripts)
+noto-fonts-emoji                                       # emoji font
+
+# --------------------------------------------------- // CLI Applications
+kitty                                                  # terminal
+vim                                                    # terminal text editor
+unzip                                                  # extracting zip files
+fzf                                                    # Command-line fuzzy finder
+fastfetch                                              # system information fetch tool
+
+# --------------------------------------------------- // Shell
+starship|zsh                                           # customizable shell prompt written in Rust
+starship|fish                                          # customizable shell prompt
+
+# --------------------------------------------------- // Shell Enhancements (zsh)
+bat|zsh                                                # enhanced version of cat
+eza|zsh                                                # file lister for zsh
+duf|zsh                                                # prettier version of df for zsh
+
+# --------------------------------------------------- // Shell Enhancements (fish)
+bat|fish                                               # enhanced version of cat
+eza|fish                                               # file lister
+duf|fish                                               # prettier version of df
+
+# --------------------------------------------------- // Optional CLI Tools
+# wttrbar                                              # for weather
+# python-requests|wttrbar                              # script dependency
+# cava                                                 # audio visualizer
