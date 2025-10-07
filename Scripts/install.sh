@@ -20,6 +20,30 @@ cat <<"EOF"
 EOF
 
 #--------------------------------#
+# Select Installation Mode       #
+#--------------------------------#
+echo ""
+cat <<'EOF'
+Select Installation Mode:
+  [1] Desktop (Contains Everything. Full HyDE experience)
+  [2] CLI Only (Shell + Tools. For WSL or another DE)
+
+EOF
+
+read -p "Enter option number [default: 1]: " -r install_mode
+
+case "${install_mode}" in
+    2)
+        flg_headless=1
+        echo -e "\033[0;32m[MODE]\033[0m :: CLI-Only mode selected"
+        ;;
+    *)
+        flg_headless=0
+        echo -e "\033[0;32m[MODE]\033[0m :: Desktop mode selected"
+        ;;
+esac
+
+#--------------------------------#
 # import variables and functions #
 #--------------------------------#
 scrDir="$(dirname "$(realpath "$0")")"
@@ -88,7 +112,7 @@ done
 
 # Only export that are used outside this script
 HYDE_LOG="$(date +'%y%m%d_%Hh%Mm%Ss')"
-export flg_DryRun flg_Nvidia flg_Shell flg_Install flg_ThemeInstall HYDE_LOG
+export flg_DryRun flg_Nvidia flg_Shell flg_Install flg_ThemeInstall flg_headless HYDE_LOG
 
 if [ "${flg_DryRun}" -eq 1 ]; then
     print_log -n "[test-run] " -b "enabled :: " "Testing without executing"
@@ -133,7 +157,13 @@ EOF
     #----------------------#
     shift $((OPTIND - 1))
     custom_pkg=$1
-    cp "${scrDir}/pkg_core.lst" "${scrDir}/install_pkg.lst"
+
+    if [ ${flg_headless} -eq 1 ]; then
+        cp "${scrDir}/pkg_headless.lst" "${scrDir}/install_pkg.lst"
+        print_log -g "[HEADLESS]" -b " :: " "Using CLI-only package list"
+    else
+        cp "${scrDir}/pkg_core.lst" "${scrDir}/install_pkg.lst"
+    fi
     trap 'mv "${scrDir}/install_pkg.lst" "${cacheDir}/logs/${HYDE_LOG}/install_pkg.lst"' EXIT
 
     echo -e "\n#user packages" >>"${scrDir}/install_pkg.lst" # Add a marker for user packages
@@ -144,17 +174,21 @@ EOF
     #--------------------------------#
     # add nvidia drivers to the list #
     #--------------------------------#
-    if nvidia_detect; then
-        if [ ${flg_Nvidia} -eq 1 ]; then
-            cat /usr/lib/modules/*/pkgbase | while read -r kernel; do
-                echo "${kernel}-headers" >>"${scrDir}/install_pkg.lst"
-            done
-            nvidia_detect --drivers >>"${scrDir}/install_pkg.lst"
-        else
-            print_log -warn "Nvidia" "Nvidia GPU detected but ignored..."
+    if [ ${flg_headless} -eq 0 ]; then
+        if nvidia_detect; then
+            if [ ${flg_Nvidia} -eq 1 ]; then
+                cat /usr/lib/modules/*/pkgbase | while read -r kernel; do
+                    echo "${kernel}-headers" >>"${scrDir}/install_pkg.lst"
+                done
+                nvidia_detect --drivers >>"${scrDir}/install_pkg.lst"
+            else
+                print_log -warn "Nvidia" "Nvidia GPU detected but ignored..."
+            fi
         fi
+        nvidia_detect --verbose
+    else
+        print_log -y "[CLI-Only]" -b " :: " "Skipping Nvidia detection"
     fi
-    nvidia_detect --verbose
 
     #----------------#
     # get user prefs #
@@ -250,8 +284,29 @@ EOF
     fi
 
     "${scrDir}/restore_fnt.sh"
-    "${scrDir}/restore_cfg.sh"
-    "${scrDir}/restore_thm.sh"
+    
+    if [ ${flg_headless} -eq 1 ]; then
+        "${scrDir}/restore_cfg.sh" "${scrDir}/restore_cfg_headless.psv"
+    else
+        "${scrDir}/restore_cfg.sh"
+    fi
+    
+    if [ ${flg_headless} -eq 0 ]; then
+        "${scrDir}/restore_thm.sh"
+        print_log -g "[generate] " "cache ::" "Wallpapers..."
+
+        if [ "${flg_DryRun}" -ne 1 ]; then
+            export PATH="$HOME/.local/lib/hyde:$HOME/.local/bin:${PATH}"
+            "$HOME/.local/lib/hyde/swwwallcache.sh" -t ""
+            "$HOME/.local/lib/hyde/theme.switch.sh" -q || true
+            "$HOME/.local/lib/hyde/waybar.py" --update || true
+
+            echo "[install] reload :: Hyprland"
+        fi
+    else
+        print_log -y "[CLI-Only]" -b " :: " "Skipping theme installation"
+    fi
+
     print_log -g "[generate] " "cache ::" "Wallpapers..."
     if [ "${flg_DryRun}" -ne 1 ]; then
         export PATH="$HOME/.local/lib/hyde:$HOME/.local/bin:${PATH}"
